@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         COMPOSE_FILE = 'docker-compose.yml'
+        CONTAINER_NAME = "cloudcomputingg"
+        IMAGE_NAME = "cloudcomputingg"
         // tambahan environment jika perlu:
         // APP_ENV = 'production'
         // DB_HOST = 'mysql'
