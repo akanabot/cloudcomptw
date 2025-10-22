@@ -1,44 +1,77 @@
 pipeline {
     agent any
 
+    environment {
+        COMPOSE_FILE = 'docker-compose.yml'
+        CONTAINER_NAME = 'cloudcomputingg'     // Laravel container (lihat di docker ps)
+        IMAGE_NAME = 'cloudcomputingg'
+    }
+
     stages {
         stage('Checkout Code') {
             steps {
-                echo '🔄 Mengambil source code dari GitHub...'
-                git 'https://github.com/akanabot/cloudcomptw.git'
+                echo "🔄 Mengambil source code dari GitHub..."
+                git branch: 'main', url: 'https://github.com/akanabot/cloudcomptw.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                echo '🏗️ Membangun Docker image Laravel...'
-                bat 'docker-compose -f docker-compose.yml build'
+                echo "🏗️ Membangun Docker image Laravel..."
+                bat "docker-compose -f ${COMPOSE_FILE} build"
             }
         }
 
-        stage('Start Laravel Container') {
+        stage('Run Docker Containers') {
             steps {
-                echo '🚀 Menjalankan container Laravel...'
-                bat 'docker-compose -f docker-compose.yml up -d'
+                echo "🚀 Menjalankan ulang container Laravel dan MySQL..."
+                bat """
+                echo ==== HENTIKAN CONTAINER LAMA ====
+                docker stop ${CONTAINER_NAME} || echo "Container ${CONTAINER_NAME} tidak berjalan"
+                docker rm ${CONTAINER_NAME} || echo "Container ${CONTAINER_NAME} sudah dihapus"
+                docker stop mysql_web || echo "Container mysql_web tidak berjalan"
+                docker rm mysql_web || echo "Container mysql_web sudah dihapus"
+
+                echo ==== JALANKAN ULANG DOCKER COMPOSE ====
+                docker-compose -f ${COMPOSE_FILE} down || exit 0
+                docker-compose -f ${COMPOSE_FILE} up -d
+
+                echo ==== CEK CONTAINER YANG AKTIF ====
+                docker ps
+                """
             }
         }
 
         stage('Verify Laravel Running') {
             steps {
-                echo '🔍 Mengecek apakah Laravel sudah aktif...'
-                // Tunggu 15 detik biar Laravel siap
-                bat 'timeout /t 15'
-                
-                // Coba akses container Laravel
-                bat 'docker exec cloudcomptw-app curl -f http://localhost:8000 || exit 1'
+                echo "🔍 Verifikasi aplikasi Laravel..."
+                bat """
+                echo ==== TUNGGU 20 DETIK SUPAYA CONTAINER SIAP ====
+                timeout /t 20
+
+                echo ==== CEK STATUS DARI DALAM CONTAINER ====
+                docker exec ${CONTAINER_NAME} curl -f http://localhost:8000 || (
+                    echo "⚠ Laravel tidak dapat diakses dari dalam container"
+                    exit 1
+                )
+
+                echo ==== CEK KONEKSI DARI HOST (OPSIONAL) ====
+                curl -I http://127.0.0.1:8000 || echo "⚠ Tidak bisa mengakses Laravel dari host"
+                """
             }
         }
     }
 
     post {
+        success {
+            echo '✅ Laravel berhasil dijalankan via Docker Compose di port 8000!'
+        }
+        failure {
+            echo '❌ Build gagal, periksa log Jenkins Console Output.'
+        }
         always {
-            echo '🧹 Membersihkan container...'
-            bat 'docker-compose -f docker-compose.yml down'
+            echo '🧹 Membersihkan container sementara...'
+            bat "docker-compose -f ${COMPOSE_FILE} down"
         }
     }
 }
