@@ -54,7 +54,7 @@ pipeline {
                 
                 echo.
                 echo ==== ISI HALAMAN (HARUSNYA MUNCUL HALAMAN LARAVEL) ====
-                curl http://127.0.0.1:8000 || echo "⚠ Gagal memuat halaman Laravel"
+                curl hhttp://127.0.0.1:8000 || echo "⚠ Gagal memuat halaman Laravel"
                 echo ===============================
                 '''
             }
