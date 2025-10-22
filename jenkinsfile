@@ -1,0 +1,72 @@
+pipeline {
+    agent any
+
+    environment {
+        COMPOSE_FILE = 'docker-compose.yml'
+        CONTAINER_NAME = 'cloudcomputingg'
+        IMAGE_NAME = 'cloudcomputingg'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                echo "🔄 Mengambil source code dari GitHub..."
+                git branch: 'main', url: 'https://github.com/akanabot/cloudcomptw.git'
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                echo "🏗️ Membangun Docker image Laravel..."
+                bat 'docker-compose -f docker-compose.yml build'
+            }
+        }
+
+        stage('Run Docker Containers') {
+            steps {
+                echo "🚀 Menjalankan ulang container Laravel dan MySQL..."
+                bat '''
+                echo ==== HENTIKAN CONTAINER LAMA ====
+                docker stop cloudcomputingg || echo "Container cloudcomputingg tidak berjalan"
+                docker rm cloudcomputingg || echo "Container cloudcomputingg sudah dihapus"
+                docker stop mysql_web || echo "Container mysql_web tidak berjalan"
+                docker rm mysql_web || echo "Container mysql_web sudah dihapus"
+
+                echo ==== JALANKAN ULANG DOCKER COMPOSE ====
+                docker-compose -f docker-compose.yml down || exit 0
+                docker-compose -f docker-compose.yml up -d
+
+                echo ==== CEK CONTAINER YANG AKTIF ====
+                docker ps
+                '''
+            }
+        }
+
+        stage('Verify Laravel Running') {
+            steps {
+                echo "🔍 Verifikasi aplikasi Laravel..."
+                bat '''
+                echo ==== TUNGGU 20 DETIK SUPAYA CONTAINER SIAP ====
+                ping 127.0.0.1 -n 20 >nul
+
+                echo ==== CEK KONEKSI KE LARAVEL ====
+                curl -I http://127.0.0.1:8000 || echo "⚠ Tidak bisa mengakses Laravel di port 8000"
+                
+                echo.
+                echo ==== ISI HALAMAN (HARUSNYA MUNCUL HALAMAN LARAVEL) ====
+                curl http://127.0.0.1:8000 || echo "⚠ Gagal memuat halaman Laravel"
+                echo ===============================
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Laravel berhasil dijalankan via Docker Compose di port 8000!'
+        }
+        failure {
+            echo '❌ Build gagal, periksa log Jenkins Console Output.'
+        }
+    }
+}
