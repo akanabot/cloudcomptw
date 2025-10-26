@@ -5,6 +5,7 @@ pipeline {
         COMPOSE_FILE = "docker-compose.yml"
         CONTAINER_NAME = "cloudcomputingg"   // nama service dari docker-compose
         MYSQL_CONTAINER = "mysql_web"
+        DOCKER_CREDENTIALS = 'dockerhub-credentials'
         REPO_URL = "https://github.com/akanabot/cloudcomptw.git"
     }
 
