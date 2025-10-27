@@ -4,7 +4,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     image: cloudcomputingg
     container_name: cloudcomputingg
     restart: unless-stopped
