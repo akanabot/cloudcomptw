@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         COMPOSE_FILE = "docker-compose.yml"
-        CONTAINER_NAME = "cloudcomputingg"   // nama service dari docker-compose
+        CONTAINER_NAME = "cloudcomputingg"   
         MYSQL_CONTAINER = "mysql_web"
         DOCKER_CREDENTIALS = 'dockerhub-credentials'
         REPO_URL = "https://github.com/akanabot/cloudcomptw.git"
@@ -12,17 +12,17 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                echo "🔄 Checkout source code dari repo..."
+                echo "Checkout source code"
                 git branch: 'main', url: "${REPO_URL}"
 
-                echo "🛠 Konfigurasi Git safe directory..."
+                echo "Git safe directory"
                 bat 'git config --global --add safe.directory "%cd%"'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                echo "🏗️ Build Docker images menggunakan docker-compose..."
+                echo "build image"
                 bat """
                 docker-compose -f ${COMPOSE_FILE} build
                 """
@@ -31,19 +31,16 @@ pipeline {
 
         stage('Run Docker Containers') {
             steps {
-                echo "🚀 Jalankan ulang container Laravel dan MySQL..."
+                echo "Run Docker Containers"
                 bat """
-                echo ==== HENTIKAN CONTAINER LAMA ====
-                docker stop ${CONTAINER_NAME} || echo "${CONTAINER_NAME} tidak berjalan"
-                docker rm ${CONTAINER_NAME} || echo "${CONTAINER_NAME} sudah dihapus"
-                docker stop ${MYSQL_CONTAINER} || echo "${MYSQL_CONTAINER} tidak berjalan"
-                docker rm ${MYSQL_CONTAINER} || echo "${MYSQL_CONTAINER} sudah dihapus"
+                docker stop ${CONTAINER_NAME} || echo "${CONTAINER_NAME} fail"
+                docker rm ${CONTAINER_NAME} || echo "${CONTAINER_NAME} deleted"
+                docker stop ${MYSQL_CONTAINER} || echo "${MYSQL_CONTAINER} fail"
+                docker rm ${MYSQL_CONTAINER} || echo "${MYSQL_CONTAINER} deleted"
 
-                echo ==== JALANKAN ULANG DOCKER COMPOSE ====
                 docker-compose -f ${COMPOSE_FILE} down || exit 0
                 docker-compose -f ${COMPOSE_FILE} up -d
 
-                echo ==== CEK CONTAINER YANG AKTIF ====
                 docker ps
                 """
             }
@@ -51,16 +48,14 @@ pipeline {
 
         stage('Verify Laravel Running') {
             steps {
-                echo "🔍 Verifikasi Laravel container berjalan dengan benar..."
+                echo "Verify Laravel Running"
                 bat """
-                echo ==== TUNGGU 20 DETIK SUPAYA CONTAINER SIAP ====
                 ping 127.0.0.1 -n 20 >nul
 
-                echo ==== CEK STATUS LARAVEL ====
-                curl -I http://127.0.0.1:8000 || echo "⚠ Gagal akses Laravel di port 8000"
+                curl -I http://127.0.0.1:8000 || echo "fail access laravel port 8000"
 
                 echo ==== CEK ISI HALAMAN LARAVEL ====
-                curl http://127.0.0.1:8000 || echo "⚠ Gagal ambil halaman Laravel"
+                curl http://127.0.0.1:8000 || echo "fail to load laravel"
                 """
             }
         }
@@ -68,13 +63,13 @@ pipeline {
 
     post {
         success {
-            echo '✅ Laravel berhasil dijalankan via Docker Compose di port 8000!'
+            echo 'laravel running successful'
         }
         failure {
-            echo '❌ Build gagal, periksa log Jenkins Console Output.'
+            echo 'failed to run laravel'
         }
         always {
-            echo '🧹 Membersihkan container sementara...'
+            echo 'clear temporary container'
             bat "docker-compose -f ${COMPOSE_FILE} down"
         }
     }
